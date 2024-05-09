@@ -1,0 +1,149 @@
+#!/usr/bin/bash
+set -e
+
+# ------------------------------------------------------------------------------
+# scale-down
+# ------------------------------------------------------------------------------
+# This script runs in the video-sip-gateway instances. It is triggered by a
+# systemd timer every 60 seconds. It sends "remove me" request to the scaler
+# service if it is time to shutdown.
+#
+# - if the jibri service is unhealty, it sends "remove me" request immediately.
+# - if the jibri service is expired, it sends "remove me" request immediately.
+# - if the jibri service is busy, it resets the beginning of idle time (t0-time)
+# - if the jibri service is idle and the idle time (current-time - t0-time)
+#   is greater than $ALLOWED_IDLETIME, it sends "remove me" request to the
+#   scaler service.
+#
+# The scaler service may reject the "remove me" request if the number of
+# available instances is less than needed. In this case, this script resets the
+# beginning of idle time and it doesn't send a new "remove me" request for
+# $ALLOWED_IDLETIME seconds.
+#
+# The scaler service always accepts the "remove me" request of unhealty or
+# expired instances.
+#
+# This instance will not shutdown itself if its request is accepted. It will
+# wait for the lifecycle management system to shutdown this instance.
+#
+# This script uses a `Bearer Token` in `Authorization` header of the request for
+# security reasons. It signs the token by using Sidecar's key. This token is
+# checked by the `nginx-jwt-auth` module (not directly by the scaler service).
+# ------------------------------------------------------------------------------
+
+# Scaler URL
+SCALER_URL="https://jitsi.nordeck.corp/scaler"
+# Sidecar key file to sign JWT
+SIDECAR_ASAP_KEY=/etc/jitsi/sidecar/asap.key
+# Allowed idle time in seconds
+ALLOWED_IDLETIME=600
+# The file which keeps the beginning of idle time (t0-time)
+T0_FILE="/tmp/scale-down-t0"
+# Instance IP contains the IP address of the instance (empty by default)
+INSTANCE_IP=
+
+# ------------------------------------------------------------------------------
+# SET_INSTANCE_IP
+# ------------------------------------------------------------------------------
+function set_instance_ip() {
+    # public interface
+    DEFAULT_ROUTE=$(ip route | egrep '^default ' | head -n1)
+    [[ -z "$DEFAULT_ROUTE" ]] && return
+
+    PUBLIC_INTERFACE=${DEFAULT_ROUTE##*dev }
+    PUBLIC_INTERFACE=${PUBLIC_INTERFACE/% */}
+    [[ -z "$(ip addr show $PUBLIC_INTERFACE 2>/dev/null)" ]] && return
+
+    # IP address of the public interface
+    INSTANCE_IP=$(ip addr show "$PUBLIC_INTERFACE" | \
+        egrep "$PUBLIC_INTERFACE$" | xargs | cut -d " " -f2 | cut -d "/" -f1)
+}
+
+# ------------------------------------------------------------------------------
+# REMOVE_ME FUNCTION
+# ------------------------------------------------------------------------------
+function remove_me() {
+    set_instance_ip
+    [[ -z "$INSTANCE_IP" ]] && return
+
+    IAT=$(date +"%s")
+    (( EXP = IAT + 60 ))
+
+    TOKEN_DATA=$(cat <<EOF
+{
+  "sub": "scaler",
+  "iat": $IAT,
+  "exp": $EXP
+}
+EOF
+)
+    REQUEST_DATA=$(cat <<EOF
+{
+  "ip": "$INSTANCE_IP",
+  "reason": "$1"
+}
+EOF
+)
+
+    echo $REQUEST_DATA
+
+    HEADER=$(echo -n '{"alg":"RS256","typ":"JWT"}' | \
+        base64 | tr '+/' '-_' | tr -d '=\n')
+    PAYLOAD=$(echo -n $TOKEN_DATA | base64 | tr '+/' '-_' | tr -d '=\n')
+    SIGN=$(echo -n "$HEADER.$PAYLOAD" | \
+        openssl dgst -sha256 -binary -sign $SIDECAR_ASAP_KEY | \
+        openssl enc -base64 | tr '+/' '-_' | tr -d '=\n')
+
+    res=$(curl -k -sL $SCALER_URL/instance -X DELETE \
+        -H "Authorization: Bearer $HEADER.$PAYLOAD.$SIGN" \
+        -H "Content-Type: application/json" \
+        --data @- <<< $REQUEST_DATA)
+    [[ "$res" == "keep" ]] && date +"%s" >$T0_FILE
+
+    echo "response from scaler: $res"
+}
+
+# ------------------------------------------------------------------------------
+# CHECKING
+# ------------------------------------------------------------------------------
+# Create $T0_FILE if not exists and record the current time as the initial time.
+# The initial time is 2 seconds before now to not break IDLETIME arithmetic.
+[[ ! -f $T0_FILE ]] && date -d "-2 seconds" +"%s" >$T0_FILE
+
+# get the status
+STATUS=$(curl -s http://localhost:2222/jibri/api/v1.0/health | \
+    jq -r '.status.busyStatus')
+# skip if it is busy and update the T0 time
+if [[ "$STATUS" == "BUSY" ]]; then
+    echo "busy, no action"
+    date +"%s" >$T0_FILE
+    exit
+fi
+# shutdown immediately if it is expired
+if [[ "$STATUS" == "EXPIRED" ]]; then
+    echo "expired, send 'remove-me' request"
+    remove_me "expired"
+    exit
+fi
+
+# get the health status
+HEALTH=$(curl -s http://localhost:2222/jibri/api/v1.0/health | \
+    jq -r '.status.health.healthStatus')
+# shutdown immediately if it is unhealthy
+if [[ "$HEALTH" == "UNHEALTHY" ]]; then
+    echo "unhealthy, send 'remove-me' request"
+    remove_me "unhealty"
+    exit
+fi
+
+# calculate the idle time in seconds
+T0_TIME=$(cat $T0_FILE)
+CURRENT_TIME=$(date +"%s")
+(( IDLETIME = CURRENT_TIME - T0_TIME ))
+if [[ "$IDLETIME" -gt "$ALLOWED_IDLETIME" ]]; then
+    echo "idle for a long time ($IDLETIME secs), send 'remove-me' request"
+    remove_me "idle"
+    exit
+fi
+
+echo "wait, it is idle only for a little time ($IDLETIME secs)"

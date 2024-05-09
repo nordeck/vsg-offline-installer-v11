@@ -1,0 +1,13 @@
+[Unit]
+Description=Scale down service for video-sip-gateway
+After=network-online.target
+
+[Service]
+User=jitsi-sidecar
+Group=jibri
+ExecStart=bash /usr/local/bin/scale-down
+Restart=always
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target
