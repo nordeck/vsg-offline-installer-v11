@@ -1,7 +1,7 @@
 # Integrating a standard JMS and video-sip-gateway
 
-This guide contains the customizations to allow `video-sip-gateway` works with
-a standard JMS setup.
+This guide contains the customizations to allow `video-sip-gateway` works with a
+standard JMS setup.
 
 Assumed that:
 
@@ -36,8 +36,8 @@ INSTANCE_KEY=172.17.17.204
 NODE_OPTIONS="--use-openssl-ca"
 ```
 
-`NODE_OPTIONS` is needed if JMS has a self-signed certificate. If there
-is a trusted certificate for JMS, no need to add this line.
+`NODE_OPTIONS` is needed if JMS has a self-signed certificate. If there is a
+trusted certificate for JMS, no need to add this line.
 
 Copy JMS' self-signed certificate into `/usr/local/share/ca-certificates/` and
 run `update-ca-certificates` command.
@@ -97,9 +97,9 @@ systemctl restart jicofo.service
 As a result there should be an entry like the following in `jicofo.conf`:
 
 ```conf
-  jibri-sip: {
-    brewery-jid: "SipBrewery@internal.auth.jitsi.mydomain.corp"
-  }
+jibri-sip: {
+  brewery-jid: "SipBrewery@internal.auth.jitsi.mydomain.corp"
+}
 ```
 
 ## jibri.conf

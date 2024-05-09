@@ -4,7 +4,7 @@ SIP-Jibri (aka video-sip-gateway) offline installer for Debian 11 Bullseye.
 
 ## Installation
 
-Use a Debian 11 Bullseye box with only standard packages. If there are installed
+Use a Debian 11 Bullseye box with standard packages. If there are installed
 non-standard packages such as desktop environment, it will not work.
 
 ### Update
