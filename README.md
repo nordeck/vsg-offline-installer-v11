@@ -23,6 +23,9 @@ reboot
 
 ### Download
 
+Check the available version
+[here](https://github.com/nordeck/vsg-offline-installer-v11/releases).
+
 ```bash
 VERSION="v20240509"
 
