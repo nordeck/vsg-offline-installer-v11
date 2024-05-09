@@ -37,7 +37,7 @@ NODE_OPTIONS="--use-openssl-ca"
 ```
 
 `NODE_OPTIONS` is needed if JMS has a self-signed certificate. If there
-is a trusted certificate for JMS, no need to this line.
+is a trusted certificate for JMS, no need to add this line.
 
 Copy JMS' self-signed certificate into `/usr/local/share/ca-certificates/` and
 run `update-ca-certificates` command.
