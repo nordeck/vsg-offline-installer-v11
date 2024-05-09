@@ -2,11 +2,11 @@
 export JITSI_FQDN="jitsi.nordeck.corp"
 
 # The password of jibri@auth.$JITSI_FQDN account of Prosody
-# https://github.com/nordeck/bullseye-lxc-jitsi/blob/main/machines/nordeck-sip-template/etc/jitsi/jibri/jibri.conf#L58
+# https://github.com/nordeck/bullseye-lxc-jitsi/blob/main/machines/nordeck-sip-template/etc/jitsi/jibri/jibri.conf#L57
 export JIBRI_PASSWD="my-jibri-password"
 
 # The password of sip@sip.$JITSI_FQDN account of Prosody
-# https://github.com/nordeck/bullseye-lxc-jitsi/blob/main/machines/nordeck-sip-template/etc/jitsi/jibri/jibri.conf#L64
+# https://github.com/nordeck/bullseye-lxc-jitsi/blob/main/machines/nordeck-sip-template/etc/jitsi/jibri/jibri.conf#L63
 export JIBRI_SIP_PASSWD="my-sip-password"
 
 # If this is set as true, builder tools will be removed after building
@@ -37,7 +37,7 @@ export ENV="$BASEDIR/environment"
 #
 #   These key pairs should match each other for jitsi-component-selector and
 #   jitsi-component-sidecar. Otherwise they cannot communicate.
-#   https://github.com/nordeck/bullseye-lxc-jitsi/blob/main/installer-sub-scripts/nordeck-jitsi/310-component-selector.sh#L177-L191
+#   https://github.com/nordeck/bullseye-lxc-jitsi/blob/main/installer-sub-scripts/nordeck-jitsi/311-component-selector.sh#L177-L191
 #
 #
 # - jms-CA.crt
