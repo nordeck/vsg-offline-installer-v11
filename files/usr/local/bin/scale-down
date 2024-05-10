@@ -39,32 +39,13 @@ SIDECAR_ASAP_KEY=/etc/jitsi/sidecar/asap.key
 ALLOWED_IDLETIME=600
 # The file which keeps the beginning of idle time (t0-time)
 T0_FILE="/tmp/scale-down-t0"
-# Instance IP contains the IP address of the instance (empty by default)
-INSTANCE_IP=
-
-# ------------------------------------------------------------------------------
-# SET_INSTANCE_IP
-# ------------------------------------------------------------------------------
-function set_instance_ip() {
-    # public interface
-    DEFAULT_ROUTE=$(ip route | egrep '^default ' | head -n1)
-    [[ -z "$DEFAULT_ROUTE" ]] && return
-
-    PUBLIC_INTERFACE=${DEFAULT_ROUTE##*dev }
-    PUBLIC_INTERFACE=${PUBLIC_INTERFACE/% */}
-    [[ -z "$(ip addr show $PUBLIC_INTERFACE 2>/dev/null)" ]] && return
-
-    # IP address of the public interface
-    INSTANCE_IP=$(ip addr show "$PUBLIC_INTERFACE" | \
-        egrep "$PUBLIC_INTERFACE$" | xargs | cut -d " " -f2 | cut -d "/" -f1)
-}
 
 # ------------------------------------------------------------------------------
 # REMOVE_ME FUNCTION
 # ------------------------------------------------------------------------------
 function remove_me() {
-    set_instance_ip
-    [[ -z "$INSTANCE_IP" ]] && return
+    HOST=$(hostname)
+    [[ -z "$HOST" ]] && return
 
     IAT=$(date +"%s")
     (( EXP = IAT + 60 ))
@@ -79,7 +60,7 @@ EOF
 )
     REQUEST_DATA=$(cat <<EOF
 {
-  "ip": "$INSTANCE_IP",
+  "host": "$HOST",
   "reason": "$1"
 }
 EOF
