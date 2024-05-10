@@ -5,15 +5,18 @@ set -e
 DEFAULT_ROUTE=$(ip route | egrep '^default ' | head -n1)
 [[ -z "$DEFAULT_ROUTE" ]] && exit 1
 
-PUBLIC_INTERFACE=${DEFAULT_ROUTE##*dev }
-PUBLIC_INTERFACE=${PUBLIC_INTERFACE/% */}
-[[ -z "$(ip addr show $PUBLIC_INTERFACE 2>/dev/null)" ]] && exit 1
+INTERFACE_NAME=$(echo $DEFAULT_ROUTE | grep -oP 'dev \K[^ ]+')
+[[ -z "$INTERFACE_NAME" ]] && exit 1
 
 # IP address of the public interface
-PUBLIC_IP=$(ip addr show "$PUBLIC_INTERFACE" | egrep "$PUBLIC_INTERFACE$" | \
-    xargs | cut -d " " -f2 | cut -d "/" -f1)
-[[ -z "$PUBLIC_IP" ]] && exit 1
+INTERFACE_IP=$(ip addr show "$INTERFACE_NAME" | grep -oP 'inet \K[\d.]+')
+[[ -z "$INTERFACE_IP" ]] && exit 1
+
+# the last octet of the IP address
+LAST_OCTET=$(echo "$INTERFACE_IP" | cut -d '.' -f4)
 
 # update INSTANCE_KEY in component-sidecar config
+# select the whole IP address or the last octet depending on your need
 sed -i '/^INSTANCE_KEY/d' /etc/jitsi/sidecar/env
-echo "INSTANCE_KEY=$PUBLIC_IP" >>/etc/jitsi/sidecar/env
+echo "INSTANCE_KEY=$INTERFACE_IP" >>/etc/jitsi/sidecar/env
+#echo "INSTANCE_KEY=$LAST_OCTET" >>/etc/jitsi/sidecar/env
