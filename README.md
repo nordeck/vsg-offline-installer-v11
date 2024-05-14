@@ -27,7 +27,7 @@ Check the available version
 [here](https://github.com/nordeck/vsg-offline-installer-v11/releases).
 
 ```bash
-VERSION="v20240509"
+VERSION="v20240514"
 
 wget https://github.com/nordeck/vsg-offline-installer-v11/archive/refs/tags/$VERSION.tar.gz
 tar zxf $VERSION.tar.gz
