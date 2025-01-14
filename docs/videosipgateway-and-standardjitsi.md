@@ -49,8 +49,6 @@ Create `sip` virtualhost for `prosody`:
 /etc/prosody/conf.avail/sip.jitsi.mydomain.corp.cfg.lua
 
 ```lua
-plugin_paths = { "/usr/share/jitsi-meet/prosody-plugins/" }
-
 VirtualHost "sip.jitsi.mydomain.corp"
     modules_enabled = {
         "limits_exception";
